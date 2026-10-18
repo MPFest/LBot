@@ -1,4 +1,7 @@
-#include <IRremote.h>
+#include <IRremote.hpp>  // IRremote 4.x
+
+const unsigned int ir_prijimac = 2;  // IR prijimac na pinu D2
+unsigned long casPovelu = 0;  // Kdy naposledy prisel povel z ovladace (ms)
 
 // Motor A, Leva strana
 const unsigned int pwmLeft = 6; // PWM pin pro motor A
@@ -18,37 +21,40 @@ void setup() {
   pinMode(pwmRight, OUTPUT);  // PWM pin B jako vystup
   pinMode(right, OUTPUT);  // Dir pin B jako vystup 
 
+  IrReceiver.begin(ir_prijimac);  // Start prijimace
   motoryStop();  // Motory stop
 }
 
 void loop() {
-  decode_results prijaty_kod;  // Nacteny kod z prijimace ulozime do promenne
-
-  if (irrecv.decode(&prijaty_kod)){  // Poku je prijaty kod
-    irrecv.resume();  // Nacte novou hodnotu
-    
-    if (prijaty_kod.value == 0xFFFFFFFF) prijaty_kod.value = kod;  // Pokud prichazi kod opakovane (pri delsim stisku tlacitka na ovladaci)
-
-    switch (prijaty_kod.value) {  // Podle prijateho kodu ovladame motory
-      case 16712445:
-        jedDopredu();
-        break;
-      case 16750695:
-        jedDozadu();
-        break;
-      case 16769055:
-        otocDoleva();
-        break;
-      case 16748655:
-        otocDoprava();
-        break;
-      default:
-        //
-        break;
+  if (IrReceiver.decode()) {  // Pokud je prijaty kod
+    // Jen nas ovladac Car MP3 (protokol NEC). Pri drzeni tlacitka chodi opakovani se stejnym cislem tlacitka.
+    if (IrReceiver.decodedIRData.protocol == NEC) {
+      switch (IrReceiver.decodedIRData.command) {  // Podle cisla tlacitka ovladame motory
+        case 0x40:  // Tlacitko >>|
+          jedDopredu();
+          casPovelu = millis();
+          break;
+        case 0x19:  // Tlacitko 100+
+          jedDozadu();
+          casPovelu = millis();
+          break;
+        case 0x07:  // Tlacitko -
+          otocDoleva();
+          casPovelu = millis();
+          break;
+        case 0x09:  // Tlacitko EQ
+          otocDoprava();
+          casPovelu = millis();
+          break;
+        default:
+          //
+          break;
+      }
     }
+    IrReceiver.resume();  // Pripravi prijimac na dalsi kod
+  }
 
-    kod = prijaty_kod.value;   
-  }else{  // Pokud neprichazi zadny kod tlacitek dalkoveho ovladace, zastav motory
+  if (millis() - casPovelu > 250) {  // Kdyz uz neprichazi zadny kod tlacitek dalkoveho ovladace, zastav motory
     motoryStop();
   }
 }

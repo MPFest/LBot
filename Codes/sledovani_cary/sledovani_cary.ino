@@ -1,6 +1,16 @@
 const unsigned int cidlo_L = 9;  // Leve cidlo na pinu 9
 const unsigned int cidlo_R = 10;  // Prave cidlo na pinu 10
 
+// Logika cidel cary - muze se u ruznych kusu lisit. Zjistis ji podle LED na cidle:
+//   true  = LED sviti nad svetlou podlahou a nad carou zhasne
+//   false = LED sviti nad carou a nad svetlou podlahou zhasne
+const bool CIDLO_CARY_SVETLO_JE_HIGH = true;
+
+// Zpusob sledovani cary:
+//   true  = robot jede PO care, obe cidla nad carou (siroka cara, sirsi nez rozestup cidel)
+//   false = robot jede rozkrocmo, cara je MEZI cidly (tenka cara, uzsi nez rozestup cidel)
+const bool JIZDA_PO_CARE = true;
+
 // Motor A, Leva strana
 const unsigned int pwmLeft = 6; // PWM pin pro motor A
 const unsigned int left = 7; // Dir pin, ktery urcuje smer pro motor A
@@ -16,6 +26,7 @@ unsigned int rychlost = 70;  // Rychlost jizdy v rozsahu 0 - 255, 0 = stop, 255 
 const int tlacitko = A7;
 bool stav_tlacitka = 0;
 bool on = 0;
+const char* posledniStav = "";  // Co se naposledy vypsalo na seriovou konzoli
 
 void setup () {
   Serial.begin(115200); 
@@ -41,25 +52,39 @@ void loop () {
   }
 
   if (on){  // Pokud byl zapnut rezim sledovani cary
-    bool s1 = !digitalRead(cidlo_L);  // Nacteni logicke urvone z leveho cidla sledovani cary
-    bool s2 = !digitalRead(cidlo_R);  // Nacteni logicke urvone z praveho cidla sledovani cary
- 
-    if (s1 && s2) { 
-      jedDopredu(); 
-      Serial.println("Dopredu");
-    } else if (!s1 && !s2) { 
-      motoryStop(); 
-      Serial.println("Stop");
-    } else if (s1 && !s2) { 
-      otocDoprava(); 
-      Serial.println("Doprava");
-    } else if (!s1 && s2) { 
-      otocDoleva(); 
-      Serial.println("Doleva");
+    bool s1 = naSvetlePodlaze(cidlo_L);  // true = leve cidlo vidi svetlou podlahu, false = caru
+    bool s2 = naSvetlePodlaze(cidlo_R);  // true = prave cidlo vidi svetlou podlahu, false = caru
+
+    // Kdy jet rovne: po care = obe cidla na care, rozkrocmo = obe cidla na svetle podlaze
+    bool rovne = JIZDA_PO_CARE ? (!s1 && !s2) : (s1 && s2);
+    const char* stav;
+    if (rovne) {
+      jedDopredu();
+      stav = "Dopredu";
+    } else if (s1 && !s2) {  // Cara je pod pravym cidlem
+      otocDoprava();
+      stav = "Doprava";
+    } else if (!s1 && s2) {  // Cara je pod levym cidlem
+      otocDoleva();
+      stav = "Doleva";
+    } else {  // Po care: ztratil caru / rozkrocmo: prekrizena cara (cil)
+      motoryStop();
+      stav = "Stop";
+    }
+
+    // Vypisovat jen zmeny - jinak se seriova konzole zahlti a vypis se zpozduje o nekolik sekund
+    if (stav != posledniStav) {
+      Serial.println(stav);
+      posledniStav = stav;
     }
   }else{  // Pokud byl vypnut rezim sledovani cary
     motoryStop();
   }
+}
+
+// Vrati true, kdyz cidlo vidi svetlou podlahu (podle prepinace CIDLO_CARY_SVETLO_JE_HIGH)
+bool naSvetlePodlaze(unsigned int pin) {
+  return (digitalRead(pin) == HIGH) == CIDLO_CARY_SVETLO_JE_HIGH;
 }
 
 // Pomocna procedura pro vypocet korigovane rychlosti otaceni leveho motoru 

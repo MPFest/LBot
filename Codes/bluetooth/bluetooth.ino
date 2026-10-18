@@ -12,6 +12,12 @@ unsigned int rychlost = 200;  // Rychlost jizdy v rozsahu 0 - 255, 0 = stop, 255
 
 char prijata_data;  // Promenna, do ktere se nactou prijata data z bluetooth
 
+// Pojistka: kdyz z aplikace neprijde povel dele nez BT_TIMEOUT_MS, robot zastavi.
+// Mnoho aplikaci pri pusteni tlacitka nic neposle - bez pojistky by robot jel donekonecna.
+// Aplikace musi pri drzeni tlacitka posilat povel opakovane. Kdyz robot pri drzeni cuka, zvys.
+const unsigned long BT_TIMEOUT_MS = 500;
+unsigned long posledniPovel = 0;  // Kdy prisel posledni povel k jizde (ms)
+
 void setup() {
   pinMode(pwmLeft, OUTPUT);  // PWM pin A jako vystup
   pinMode(left, OUTPUT);  // Dir pin A jako vystup
@@ -30,15 +36,19 @@ void loop() {
     switch (prijata_data) {
       case 'u':
         jedDopredu();
+        posledniPovel = millis();
         break;
       case 'd':
         jedDozadu();
+        posledniPovel = millis();
         break;
       case 'l':
         otocDoleva();
+        posledniPovel = millis();
         break;
       case 'r':
         otocDoprava();
+        posledniPovel = millis();
         break;
       case 'o':
         motoryStop();
@@ -47,6 +57,10 @@ void loop() {
         //
         break;
     } 
+  }
+
+  if (millis() - posledniPovel > BT_TIMEOUT_MS) {  // Z aplikace dlouho neprisel povel - zastavit
+    motoryStop();
   }
 }
 

@@ -1,10 +1,12 @@
 const unsigned int tlacitko = A7;  // Tlacitko pripojeno na pin A7
+const unsigned int bzucak = 8;  // Bzucak pripojen na pin D8
 bool stav_tlacitka = 0;  // Promenna, kam se bude ukladat aktualni stav tlacitka
 
 void setup() {
   Serial.begin(115200);
   pinMode(bzucak, OUTPUT);  // Nastaveni pinu, na ktery je pripojen bzucak, jako vystupni
-  pinMode(tlacitko, INPUT);  // Nastaveni pinu, na ktery je pripojeno tlacitko, jako vstupni
+  // Tlacitko je na pinu A7, ktery je na Arduino NANO jen analogovy vstup - pinMode() se na nej nesmi volat
+  // (jadro Arduina nekontroluje cislo pinu a nahodne by prepsalo nastaveni jinych pinu). analogRead() ho nepotrebuje.
 }
 
 void loop() {
