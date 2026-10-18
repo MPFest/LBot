@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="cs">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#c9ced3">
+  <meta name="description" content="Ovladač robota LaskaKit LBot v prohlížeči: jízda přes Bluetooth a sonar, který ukazuje, co robot vidí.">
+  <title>LBot ovladač</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="ikony/ikona.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styl.css">
+</head>
+<body data-stav="odpojeno">
+  <header class="lista">
+    <span class="znacka">LBot</span>
+    <span class="kontrolka" aria-hidden="true"></span>
+    <span id="stav" class="stav" role="status">Nepřipojeno</span>
+    <button id="vypisTlacitko" type="button" class="tlacitko-lista" aria-expanded="false" aria-controls="vypisPanel">Výpis</button>
+    <button id="spojeniTlacitko" type="button" class="tlacitko-lista hlavni">Připojit</button>
+  </header>
+
+  <main class="ovladac">
+    <section class="oblast-kriz">
+      <div id="kriz" class="kriz" role="group" aria-label="Jízda: drž směr, puštěním robot zastaví">
+        <span class="rameno nahoru" data-smer="dopredu"></span>
+        <span class="rameno vlevo" data-smer="doleva"></span>
+        <span class="rameno vpravo" data-smer="doprava"></span>
+        <span class="rameno dolu" data-smer="dozadu"></span>
+        <span class="naboj"></span>
+      </div>
+      <p class="napoveda-klavesy">Šipky nebo WASD jezdí, C přepíná čáru</p>
+    </section>
+
+    <section id="obrazovka" class="obrazovka" aria-label="Sonar: co robot vidí před sebou">
+      <canvas id="sonar"></canvas>
+      <p class="odecet" aria-hidden="true"><span id="cm" class="cislo">–</span><span class="jednotka">cm</span></p>
+      <p id="rezim" class="rezim" hidden></p>
+      <div id="svetloUkazatel" class="svetlo-ukazatel" role="img" aria-label="Okolní světlo" hidden>
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <defs>
+            <mask id="srpek">
+              <rect width="48" height="48" fill="#fff"/>
+              <circle cx="31" cy="18" r="10" fill="#000"/>
+            </mask>
+          </defs>
+          <g class="slunce">
+            <g class="paprsky">
+              <path d="M24 5v6M24 37v6M5 24h6M37 24h6M10.6 10.6l4.2 4.2M33.2 33.2l4.2 4.2M10.6 37.4l4.2-4.2M33.2 14.8l4.2-4.2"/>
+            </g>
+            <circle cx="24" cy="24" r="8.5"/>
+          </g>
+          <g class="zapad">
+            <path class="zapad-slunce" d="M13 32a11 11 0 0 1 22 0z"/>
+            <path class="zapad-paprsky" d="M24 13v4M14.5 17.5l2.6 2.6M33.5 17.5l-2.6 2.6"/>
+            <path class="obzor" d="M6 32h36"/>
+          </g>
+          <circle class="mesic" cx="24" cy="25" r="12" mask="url(#srpek)"/>
+          <g class="hvezdy">
+            <circle cx="38" cy="9" r="1.8"/>
+            <circle cx="42" cy="21" r="1.3"/>
+            <circle cx="31" cy="5" r="1.1"/>
+          </g>
+        </svg>
+        <span class="sloupek"><span class="hladina"></span><span class="prah"></span></span>
+      </div>
+      <p id="bezDat" class="bez-dat" hidden>Robot neposílá data pro sonar. Jezdit jde i tak, sonar ale potřebuje v robotovi demo program v2.0.</p>
+
+      <div id="vyzva" class="vyzva">
+        <h2 id="vyzvaNadpis">Připoj robota</h2>
+        <p id="vyzvaText">Zapni robota a v nabídce vyber HC-06.</p>
+        <div class="vyzva-tlacitka">
+          <button id="pripojitRobota" type="button" class="tlacitko hlavni">Připojit robota</button>
+          <button id="simulace" type="button" class="tlacitko">Vyzkoušet bez robota</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="oblast-akce">
+      <button id="cara" type="button" class="cara" aria-pressed="false">
+        <svg viewBox="0 0 48 48" aria-hidden="true"><path d="M6 38c8 0 10-8 18-14s12-14 18-14"/></svg>
+        <span>Čára</span>
+      </button>
+      <button id="svetla" type="button" class="svetla" popovertarget="svetlaPanel">
+        <span class="tecky" aria-hidden="true"><i class="tecka leva"></i><i class="tecka prava"></i></span>
+        <span>Světla</span>
+      </button>
+    </section>
+  </main>
+
+  <div id="svetlaPanel" class="svetla-panel" popover>
+    <h2>Světla</h2>
+    <p id="svetlaHlaska" class="svetla-hlaska"></p>
+    <fieldset id="kdySvitit" class="segmenty">
+      <legend>Kdy svítit</legend>
+      <div class="volby"></div>
+    </fieldset>
+    <fieldset id="efekt" class="segmenty">
+      <legend>Jak svítit</legend>
+      <div class="volby"></div>
+    </fieldset>
+  </div>
+
+  <aside id="vypisPanel" class="vypis-panel" hidden>
+    <div class="vypis-hlavicka">
+      <h2>Výpis</h2>
+      <button id="vypisZavrit" type="button" class="tlacitko-lista">Zavřít</button>
+    </div>
+    <div id="vypis" class="vypis"></div>
+  </aside>
+
+  <script src="spojeni.js"></script>
+  <script src="sonar.js"></script>
+  <script src="ovladac.js"></script>
+</body>
+</html>

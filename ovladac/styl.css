@@ -1,0 +1,645 @@
+/* LBot ovladac - vzhled
+   Ovladac vypada jako hracka z brouseneho hliniku (jako podvozek LBota),
+   uprostred je obrazovka sonaru v barvach echolotu. */
+
+:root {
+  --hlinik-svetly: #dfe3e7;
+  --hlinik: #c9ced3;
+  --hlinik-tmavy: #9aa2aa;
+  --grafit: #2b3238;
+  --grafit-svetly: #3b444c;
+  --inkoust: #1c252d;
+  --hlubina: #0e2a47;
+  --hlubina-text: #b9d0e4;
+  --azur: #2ec4d6;
+  --zluta: #f5c518;
+  --motor: #f2b705;
+  --cervena: #e8253b;
+  --oranzova: #ff7a1a;
+  --led-modra: #3d7bff;
+  --pismo: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  font-family: var(--pismo);
+  color: var(--inkoust);
+  /* Brouseny hlinik */
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.07) 0 1px, rgba(0, 0, 0, 0.025) 1px 3px),
+    linear-gradient(180deg, var(--hlinik-svetly), var(--hlinik) 60%, #b8bfc6);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 3px solid var(--led-modra);
+  outline-offset: 3px;
+}
+
+[hidden] { display: none !important; }
+
+/* ---------- Horni lista ---------- */
+
+.lista {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: max(10px, env(safe-area-inset-top)) 20px 10px;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.12), 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.znacka {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  margin-right: 8px;
+}
+
+.kontrolka {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #7c858d;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+body[data-stav="pripojeno"] .kontrolka,
+body[data-stav="simulace"] .kontrolka { background: #34c46a; box-shadow: 0 0 8px #34c46a; }
+body[data-stav="pripojuji"] .kontrolka { background: var(--motor); animation: blikani 0.8s steps(2) infinite; }
+body[data-stav="ztraceno"] .kontrolka { background: var(--cervena); box-shadow: 0 0 8px var(--cervena); }
+
+.stav {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  font-size: 15px;
+  color: #4a545d;
+}
+
+/* Na uzkem telefonu se text stavu nevejde - stav ukazuje kontrolka (text zustava pro ctecku obrazovky) */
+@media (max-width: 480px) {
+  .stav {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+  }
+  .kontrolka { margin-right: auto; }
+}
+
+.tlacitko-lista {
+  flex: none;
+  white-space: nowrap;
+  border: 0;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.tlacitko-lista.hlavni {
+  background: var(--grafit);
+  color: #fff;
+  box-shadow: 0 2px 0 #14181c;
+}
+
+/* ---------- Rozlozeni: na sirku krize | sonar | cara ---------- */
+
+.ovladac {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr) minmax(0, 0.8fr);
+  grid-template-areas: "kriz obrazovka akce";
+  align-items: center;
+  gap: 24px;
+  padding: 16px max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+}
+
+.oblast-kriz { grid-area: kriz; display: grid; justify-items: center; gap: 14px; }
+.oblast-akce { grid-area: akce; display: grid; justify-items: center; gap: 22px; }
+.obrazovka { grid-area: obrazovka; }
+
+/* Na vysku (telefon): sonar nahore, ovladani dole */
+@media (orientation: portrait) {
+  .ovladac {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "obrazovka obrazovka"
+      "kriz akce";
+    gap: 16px;
+  }
+}
+
+/* ---------- Krizovy ovladac ---------- */
+
+.kriz {
+  position: relative;
+  width: min(100%, 300px, 52vh);
+  aspect-ratio: 1;
+  touch-action: none;
+  filter: drop-shadow(0 5px 0 #14181c) drop-shadow(0 12px 14px rgba(0, 0, 0, 0.28));
+}
+@media (orientation: portrait) {
+  .kriz { width: min(100%, 260px, 30vh); }
+}
+
+.rameno,
+.naboj {
+  position: absolute;
+  background: linear-gradient(180deg, var(--grafit-svetly), var(--grafit));
+  color: #c4ccd3;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.rameno.nahoru { left: 32%; top: 0; width: 36%; height: 38%; border-radius: 14px 14px 0 0; }
+.rameno.dolu { left: 32%; bottom: 0; width: 36%; height: 38%; border-radius: 0 0 14px 14px; }
+.rameno.vlevo { left: 0; top: 32%; width: 38%; height: 36%; border-radius: 14px 0 0 14px; }
+.rameno.vpravo { right: 0; top: 32%; width: 38%; height: 36%; border-radius: 0 14px 14px 0; }
+.naboj {
+  left: 31%;
+  top: 31%;
+  width: 38%;
+  height: 38%;
+  background: radial-gradient(circle, #252b31 0 28%, var(--grafit) 30%);
+}
+
+/* Vylisovana sipka */
+.rameno::after {
+  content: "";
+  width: 42%;
+  aspect-ratio: 1;
+  background: currentColor;
+  clip-path: polygon(50% 18%, 90% 82%, 10% 82%);
+}
+.rameno.dolu::after { transform: rotate(180deg); }
+.rameno.vlevo::after { transform: rotate(-90deg); }
+.rameno.vpravo::after { transform: rotate(90deg); }
+
+.rameno.drzeno {
+  background: linear-gradient(180deg, #ffd23a, var(--motor));
+  color: #3a2c00;
+  z-index: 1;
+}
+
+.napoveda-klavesy {
+  margin: 0;
+  text-wrap: balance;
+  font-size: 13px;
+  color: #5b656e;
+  text-align: center;
+}
+@media not ((hover: hover) and (pointer: fine)) {
+  .napoveda-klavesy { display: none; }
+}
+
+/* ---------- Obrazovka sonaru ---------- */
+
+.obrazovka {
+  --cislo: clamp(40px, 9vh, 76px);  /* Velikost cisla vzdalenosti - podle ni i ukazatel svetla */
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  padding: 8px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, #737c84, #4d555c);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.7), inset 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+
+.obrazovka canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 17px;
+  background: var(--hlubina);
+}
+
+.odecet {
+  position: absolute;
+  top: 22px;
+  left: 28px;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  color: #eaf4fb;
+  pointer-events: none;
+}
+.odecet .cislo {
+  font-size: var(--cislo);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 18px currentColor;
+}
+.odecet .jednotka {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--hlubina-text);
+}
+
+.rezim {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px 7px 11px;
+  border-radius: 999px;
+  background: rgba(9, 29, 51, 0.75);
+  color: #eaf4fb;
+  font-weight: 700;
+  font-size: 15px;
+  pointer-events: none;
+}
+.rezim::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--hlinik);
+}
+.rezim[data-rezim="C"]::before { background: var(--led-modra); box-shadow: 0 0 8px var(--led-modra); }
+.rezim[data-rezim="cekam"]::before { background: var(--oranzova); box-shadow: 0 0 8px var(--oranzova); }
+.rezim[data-rezim="Z"] { background: var(--cervena); }
+.rezim[data-rezim="Z"]::before { background: #fff; animation: blikani 0.4s steps(2) infinite; }
+
+.bez-dat {
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+  margin: 0 auto;
+  max-width: 46ch;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(9, 29, 51, 0.85);
+  color: var(--zluta);
+  font-size: 14px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* Vyzva pres obrazovku (nepripojeno, ztracene spojeni, nepodporovany prohlizec) */
+.vyzva {
+  position: absolute;
+  inset: 8px;
+  border-radius: 17px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 4px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(9, 29, 51, 0.72);
+  color: #eaf4fb;
+}
+.vyzva h2 {
+  margin: 0;
+  font-size: clamp(22px, 4vh, 30px);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.vyzva p {
+  margin: 0 0 14px;
+  max-width: 40ch;
+  color: var(--hlubina-text);
+  line-height: 1.45;
+}
+.vyzva-tlacitka {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.tlacitko {
+  border: 2px solid rgba(234, 244, 251, 0.5);
+  border-radius: 14px;
+  padding: 12px 20px;
+  font-size: 17px;
+  font-weight: 700;
+  background: transparent;
+  color: #eaf4fb;
+}
+.tlacitko.hlavni {
+  border-color: var(--motor);
+  background: var(--motor);
+  color: #2a2000;
+  box-shadow: 0 3px 0 #a87e00;
+}
+
+/* Otres pri zacatku couvani */
+.obrazovka.otres { animation: otres 0.45s ease-out; }
+@keyframes otres {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-7px, 2px); }
+  30% { transform: translate(6px, -2px); }
+  45% { transform: translate(-5px, 1px); }
+  60% { transform: translate(4px, 0); }
+  80% { transform: translate(-2px, 0); }
+}
+
+@keyframes blikani {
+  50% { opacity: 0.25; }
+}
+
+/* ---------- Tlacitko Cara ---------- */
+
+.cara {
+  width: min(100%, 150px, 30vh);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  color: #c4ccd3;
+  background: radial-gradient(circle at 50% 35%, var(--grafit-svetly), var(--grafit) 70%);
+  box-shadow: 0 5px 0 #14181c, 0 12px 14px rgba(0, 0, 0, 0.28), inset 0 0 0 5px rgba(0, 0, 0, 0.25);
+  font-size: 18px;
+  font-weight: 800;
+  touch-action: manipulation;
+}
+.cara svg {
+  width: 46%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+.cara:active { transform: translateY(3px); box-shadow: 0 2px 0 #14181c, 0 6px 8px rgba(0, 0, 0, 0.25), inset 0 0 0 5px rgba(0, 0, 0, 0.25); }
+.cara[aria-pressed="true"] {
+  color: #fff;
+  background: radial-gradient(circle at 50% 35%, #5c8fff, var(--led-modra) 70%);
+  box-shadow: 0 5px 0 #1d3f8f, 0 0 26px rgba(61, 123, 255, 0.65), inset 0 0 0 5px rgba(0, 0, 0, 0.15);
+}
+
+/* ---------- Ukazatel okolniho svetla (pravy dolni roh sonaru) ---------- */
+
+.svetlo-ukazatel {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 8px;
+  border-radius: 18px;
+  background: rgba(9, 29, 51, 0.75);
+  pointer-events: none;
+}
+.svetlo-ukazatel svg { width: calc(var(--cislo) * 0.9); height: calc(var(--cislo) * 0.9); overflow: visible; }
+.svetlo-ukazatel svg g,
+.svetlo-ukazatel .mesic { opacity: 0; transition: opacity 0.5s, transform 0.5s; }
+.svetlo-ukazatel .slunce circle { fill: var(--zluta); }
+.svetlo-ukazatel .paprsky {
+  stroke: var(--zluta);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 24px 24px;
+}
+.svetlo-ukazatel .zapad-slunce { fill: var(--oranzova); }
+.svetlo-ukazatel .zapad-paprsky { stroke: var(--oranzova); stroke-width: 2.5; stroke-linecap: round; }
+.svetlo-ukazatel .obzor { stroke: var(--hlubina-text); stroke-width: 2; stroke-linecap: round; }
+.svetlo-ukazatel .mesic,
+.svetlo-ukazatel .hvezdy { fill: #e4edf6; }
+
+/* Stupne: 0 jasno, 1 svetlo, 2 sero, 3 tma, 4 hluboka tma */
+.svetlo-ukazatel[data-stupen="0"] .slunce,
+.svetlo-ukazatel[data-stupen="0"] .paprsky,
+.svetlo-ukazatel[data-stupen="1"] .slunce,
+.svetlo-ukazatel[data-stupen="1"] .paprsky { opacity: 1; }
+.svetlo-ukazatel[data-stupen="1"] .paprsky { transform: scale(0.72); }
+.svetlo-ukazatel[data-stupen="2"] .zapad { opacity: 1; }
+.svetlo-ukazatel[data-stupen="3"] .mesic,
+.svetlo-ukazatel[data-stupen="4"] .mesic,
+.svetlo-ukazatel[data-stupen="4"] .hvezdy { opacity: 1; }
+
+/* Sloupek: kolik je svetla, carka = kdy se rozsviti svetla */
+.sloupek {
+  position: relative;
+  width: 8px;
+  height: calc(var(--cislo) * 0.8);
+  border-radius: 4px;
+  background: rgba(234, 244, 251, 0.15);
+}
+.hladina {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--hladina, 0%);
+  border-radius: 4px;
+  background: var(--zluta);
+  transition: height 0.3s;
+}
+.svetlo-ukazatel[data-stupen="3"] .hladina,
+.svetlo-ukazatel[data-stupen="4"] .hladina { background: var(--hlubina-text); }
+.prah {
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  bottom: var(--prah, 50%);
+  height: 2px;
+  border-radius: 1px;
+  background: #fff;
+}
+
+/* ---------- Tlacitko Svetla a panel ---------- */
+
+/* Barvy efektu (tecky na tlacitku a ve volbach) */
+[data-efekt="p"] { --b1: #e8253b; --b2: #3d7bff; }
+[data-efekt="b"] { --b1: #f4f6f8; --b2: #f4f6f8; }
+[data-efekt="k"] { --b1: #ff8a1f; --b2: #ff8a1f; }
+[data-efekt="g"] { --b1: #3ddc84; --b2: #3ddc84; }
+[data-efekt="h"] { --b1: #ff4fd8; --b2: #2ec4d6; }
+
+.tecky { display: flex; gap: 6px; }
+.tecka {
+  display: block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--b1, #59636c);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.3s;
+}
+.tecka.prava { background: var(--b2, #59636c); }
+
+.svetla {
+  width: min(100%, 96px, 20vh);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  color: #c4ccd3;
+  background: radial-gradient(circle at 50% 35%, var(--grafit-svetly), var(--grafit) 70%);
+  box-shadow: 0 4px 0 #14181c, 0 10px 12px rgba(0, 0, 0, 0.25), inset 0 0 0 4px rgba(0, 0, 0, 0.25);
+  font-size: 14px;
+  font-weight: 800;
+  touch-action: manipulation;
+}
+.svetla:active { transform: translateY(2px); box-shadow: 0 2px 0 #14181c, 0 5px 7px rgba(0, 0, 0, 0.25), inset 0 0 0 4px rgba(0, 0, 0, 0.25); }
+/* LED na robotovi nesviti: tecky zhasnute */
+.svetla[data-sviti="0"] .tecka { opacity: 0.35; }
+/* LED na robotovi sviti: tlacitko se rozsviti jako zarovka a tecky blikaji jako efekt */
+.svetla[data-sviti="1"] {
+  color: #3a2c00;
+  background: radial-gradient(circle at 50% 35%, #fffdf2, #ffe49a 70%);
+  box-shadow: 0 4px 0 #b8952a, 0 0 26px rgba(255, 214, 102, 0.7), inset 0 0 0 4px rgba(184, 149, 42, 0.35);
+}
+.svetla[data-sviti="1"] .tecka { box-shadow: 0 0 0 2px rgba(58, 44, 0, 0.35), 0 0 8px 1px var(--b1); }
+.svetla[data-sviti="1"] .tecka.prava { box-shadow: 0 0 0 2px rgba(58, 44, 0, 0.35), 0 0 8px 1px var(--b2); }
+/* Policie: leva 2x, pak prava 2x (jako robot, 8 kroku po 80 ms) */
+.svetla[data-sviti="1"][data-efekt="p"] .tecka.leva { animation: policie-leva 0.64s steps(1) infinite; }
+.svetla[data-sviti="1"][data-efekt="p"] .tecka.prava { animation: policie-prava 0.64s steps(1) infinite; }
+/* Blinkry: obe blikaji oranzove */
+.svetla[data-sviti="1"][data-efekt="k"] .tecka { animation: blinkr 0.7s steps(1) infinite; }
+/* Duha: barvy se prelevaji */
+.svetla[data-sviti="1"][data-efekt="h"] .tecka { animation: duha 4s linear infinite; }
+
+@keyframes policie-leva {
+  0% { opacity: 1; } 12.5% { opacity: 0.2; } 25% { opacity: 1; } 37.5% { opacity: 0.2; }
+}
+@keyframes policie-prava {
+  0% { opacity: 0.2; } 50% { opacity: 1; } 62.5% { opacity: 0.2; } 75% { opacity: 1; } 87.5% { opacity: 0.2; }
+}
+@keyframes blinkr {
+  0% { opacity: 1; } 50% { opacity: 0.2; }
+}
+@keyframes duha {
+  to { filter: hue-rotate(360deg); }
+}
+
+.svetla-panel {
+  position: fixed;
+  inset: auto max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) auto;
+  margin: 0;
+  width: min(460px, calc(100vw - 32px));
+  padding: 18px 20px 6px;
+  border: 0;
+  border-radius: 22px;
+  color: var(--inkoust);
+  background: linear-gradient(180deg, var(--hlinik-svetly), var(--hlinik));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+.svetla-panel::backdrop { background: rgba(9, 29, 51, 0.25); }
+@media (orientation: portrait) {
+  .svetla-panel {
+    inset: auto 12px max(12px, env(safe-area-inset-bottom)) 12px;
+    width: auto;
+  }
+}
+.svetla-panel h2 { margin: 0 0 12px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.svetla-hlaska { margin: -4px 0 14px; color: #5b656e; line-height: 1.4; }
+.svetla-hlaska:empty { display: none; }
+
+.segmenty { border: 0; margin: 0 0 14px; padding: 0; min-width: 0; }
+.segmenty legend { padding: 0; margin-bottom: 6px; font-size: 14px; font-weight: 700; color: #4a545d; }
+.volby {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.09);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.volby label { flex: 1 1 auto; position: relative; }
+/* Efektu je pet - ve dvou radcich po trech, at zadny nezustane sam */
+#efekt .volby { display: grid; grid-template-columns: repeat(3, 1fr); }
+.volby input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+}
+.volby span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.volby .tecka { width: 9px; height: 9px; }
+.volby input:checked + span { background: var(--grafit); color: #fff; box-shadow: 0 2px 0 #14181c; }
+.volby input:focus-visible + span { outline: 3px solid var(--led-modra); outline-offset: 2px; }
+.segmenty:disabled span { opacity: 0.45; cursor: default; }
+
+/* ---------- Vypis ---------- */
+
+.vypis-panel {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  height: min(45vh, 360px);
+  display: flex;
+  flex-direction: column;
+  border-radius: 18px;
+  background: var(--hlubina);
+  color: var(--hlubina-text);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  z-index: 10;
+}
+.vypis-hlavicka {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px 18px;
+}
+.vypis-hlavicka h2 { margin: 0; font-size: 17px; color: #eaf4fb; }
+.vypis-hlavicka .tlacitko-lista { background: rgba(255, 255, 255, 0.12); color: #eaf4fb; }
+.vypis {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 18px 14px;
+  font: 14px/1.45 ui-monospace, Menlo, Consolas, monospace;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ---------- Mene pohybu ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .obrazovka.otres { animation: none; }
+  .svetlo-ukazatel svg g, .svetlo-ukazatel .mesic, .hladina { transition: none; }
+  .svetla .tecka { animation: none !important; }
+  .kontrolka, .rezim::before { animation: none !important; }
+}
